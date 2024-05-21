@@ -26,8 +26,8 @@ def draw_grid(positions):
         pygame.draw.line(screen, BLACK, (0, row * TILE_SIZE), (WIDTH, row * TILE_SIZE))
         
     for col in range(GRID_WIDTH):
-        pygame.draw.line(screen, BLACK, (col * TILE_SIZE, 0), (col * TILE_SIZE, HEIGHT
-                                                               ))
+        pygame.draw.line(screen, BLACK, (col * TILE_SIZE, 0), (col * TILE_SIZE, HEIGHT))
+        
 def main():
     running = True
     
@@ -39,6 +39,17 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
         
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                x, y = pygame.mouse.get_pos()
+                col = x // TILE_SIZE
+                row = y // TILE_SIZE
+                pos = (col, row)
+                
+                if pos is positions:
+                    positions.remove(pos)
+                else:
+                    positions.add(pos)
+                
         screen.fill(GREY)
         draw_grid(positions)
         pygame.display.update()
