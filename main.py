@@ -45,7 +45,7 @@ def main():
                 row = y // TILE_SIZE
                 pos = (col, row)
                 
-                if pos is positions:
+                if pos in positions:
                     positions.remove(pos)
                 else:
                     positions.add(pos)
