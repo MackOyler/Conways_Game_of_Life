@@ -10,6 +10,8 @@ pygame.init()
 BLACK = (0, 0, 0)
 GREY = (128, 128, 128)
 YELLOW = (255, 255, 0)
+WHITE = (255, 255, 255)
+DARK_GREY = (50, 50, 50)
 
 WIDTH, HEIGHT = 800, 800
 TILE_SIZE = 20
@@ -25,7 +27,10 @@ COME_ALIVE = [3]
 
 # Set up display
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Conway's Game of Life")
 clock = pygame.time.Clock()
+
+font = pygame.font.Font(None, 36)
 
 def gen_random(num, seed=None):
     if seed is not None:
@@ -78,7 +83,34 @@ def load_grid(filename="grid.pkl"):
     with open(filename, "rb") as f:
         return pickle.load(f)
 
+def draw_button(screen, text, x, y, w, h, inactive_color, active_color, action=None):
+    mouse = pygame.mouse.get_pos()
+    click = pygame.mouse.get_pressed()
+
+    if x + w > mouse[0] > x and y + h > mouse[1] > y:
+        pygame.draw.rect(screen, active_color, (x, y, w, h))
+        if click[0] == 1 and action is not None:
+            action()
+    else:
+        pygame.draw.rect(screen, inactive_color, (x, y, w, h))
+
+    text_surface = font.render(text, True, WHITE)
+    text_rect = text_surface.get_rect(center=((x + (w / 2)), (y + (h / 2))))
+    screen.blit(text_surface, text_rect)
+
+def clear_grid():
+    global grid
+    grid = np.zeros((GRID_HEIGHT, GRID_WIDTH), dtype=int)
+
+def regenerate_grid():
+    global grid
+    grid = np.zeros((GRID_HEIGHT, GRID_WIDTH), dtype=int)
+    positions = gen_random(random.randrange(4, 10) * GRID_WIDTH)
+    for pos in positions:
+        grid[pos[1], pos[0]] = ALIVE
+
 def main():
+    global grid
     running = True
     playing = False
     grid = np.zeros((GRID_HEIGHT, GRID_WIDTH), dtype=int)
@@ -95,19 +127,17 @@ def main():
             if event.type == pygame.MOUSEBUTTONDOWN:
                 x, y = pygame.mouse.get_pos()
                 col, row = x // TILE_SIZE, y // TILE_SIZE
-                grid[row, col] = ALIVE if grid[row, col] == DEAD else DEAD
+                if y > 40:  # Avoid clicking the buttons
+                    grid[row, col] = ALIVE if grid[row, col] == DEAD else DEAD
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     playing = not playing
                 elif event.key == pygame.K_c:
-                    grid = np.zeros((GRID_HEIGHT, GRID_WIDTH), dtype=int)
+                    clear_grid()
                     playing = False
                 elif event.key == pygame.K_g:
-                    grid = np.zeros((GRID_HEIGHT, GRID_WIDTH), dtype=int)
-                    positions = gen_random(random.randrange(4, 10) * GRID_WIDTH)
-                    for pos in positions:
-                        grid[pos[1], pos[0]] = ALIVE
+                    regenerate_grid()
                 elif event.key == pygame.K_s:
                     save_grid(grid)
                 elif event.key == pygame.K_l:
@@ -125,6 +155,14 @@ def main():
         
         screen.fill(GREY)
         draw_grid(grid)
+
+        # Draw buttons
+        draw_button(screen, "Clear", 10, 5, 120, 30, DARK_GREY, BLACK, clear_grid)
+        draw_button(screen, "Regenerate", 140, 5, 140, 30, DARK_GREY, BLACK, regenerate_grid)
+        draw_button(screen, "Step <-", 290, 5, 120, 30, DARK_GREY, BLACK, lambda: exec('global step; step = True'))
+        draw_button(screen, "Step ->", 420, 5, 120, 30, DARK_GREY, BLACK, lambda: exec('global step; step = True'))
+        draw_button(screen, "Save", 550, 5, 120, 30, DARK_GREY, BLACK, lambda: save_grid(grid))
+        
         pygame.display.update()
         
     pygame.quit()
