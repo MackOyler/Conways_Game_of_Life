@@ -99,21 +99,42 @@ def draw_button(screen, text, x, y, w, h, inactive_color, active_color, action=N
     screen.blit(text_surface, text_rect)
 
 def clear_grid():
-    global grid
+    global grid, grid_history, history_index
     grid = np.zeros((GRID_HEIGHT, GRID_WIDTH), dtype=int)
+    grid_history = [grid.copy()]
+    history_index = 0
 
 def regenerate_grid():
-    global grid
+    global grid, grid_history, history_index
     grid = np.zeros((GRID_HEIGHT, GRID_WIDTH), dtype=int)
     positions = gen_random(random.randrange(4, 10) * GRID_WIDTH)
     for pos in positions:
         grid[pos[1], pos[0]] = ALIVE
+    grid_history = [grid.copy()]
+    history_index = 0
+
+def step_forward():
+    global grid, grid_history, history_index
+    grid = update_grid(grid)
+    history_index += 1
+    if history_index < len(grid_history):
+        grid_history[history_index] = grid.copy()
+    else:
+        grid_history.append(grid.copy())
+
+def step_backward():
+    global grid, grid_history, history_index
+    if history_index > 0:
+        history_index -= 1
+        grid = grid_history[history_index].copy()
 
 def main():
-    global grid
+    global grid, grid_history, history_index
     running = True
     playing = False
     grid = np.zeros((GRID_HEIGHT, GRID_WIDTH), dtype=int)
+    grid_history = [grid.copy()]
+    history_index = 0
     step = False
     speed = 1
 
@@ -142,15 +163,19 @@ def main():
                     save_grid(grid)
                 elif event.key == pygame.K_l:
                     grid = load_grid()
+                    grid_history = [grid.copy()]
+                    history_index = 0
                 elif event.key == pygame.K_RIGHT:
-                    step = True
+                    step_forward()
+                elif event.key == pygame.K_LEFT:
+                    step_backward()
                 elif event.key == pygame.K_UP:
                     speed = min(speed + 1, 10)
                 elif event.key == pygame.K_DOWN:
                     speed = max(speed - 1, 1)
         
         if playing or step:
-            grid = update_grid(grid)
+            step_forward()
             step = False
         
         screen.fill(GREY)
@@ -159,8 +184,8 @@ def main():
         # Draw buttons
         draw_button(screen, "Clear", 10, 5, 120, 30, DARK_GREY, BLACK, clear_grid)
         draw_button(screen, "Regenerate", 140, 5, 140, 30, DARK_GREY, BLACK, regenerate_grid)
-        draw_button(screen, "Step <-", 290, 5, 120, 30, DARK_GREY, BLACK, lambda: exec('global step; step = True'))
-        draw_button(screen, "Step ->", 420, 5, 120, 30, DARK_GREY, BLACK, lambda: exec('global step; step = True'))
+        draw_button(screen, "Step <-", 290, 5, 120, 30, DARK_GREY, BLACK, step_backward)
+        draw_button(screen, "Step ->", 420, 5, 120, 30, DARK_GREY, BLACK, step_forward)
         draw_button(screen, "Save", 550, 5, 120, 30, DARK_GREY, BLACK, lambda: save_grid(grid))
         
         pygame.display.update()
