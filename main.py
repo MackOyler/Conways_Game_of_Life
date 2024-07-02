@@ -1,6 +1,7 @@
 import pygame
 import random
 import numpy as np
+import pickle
 
 # Initialize Pygame
 pygame.init()
@@ -26,7 +27,9 @@ COME_ALIVE = [3]
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
 
-def gen_random(num):
+def gen_random(num, seed=None):
+    if seed is not None:
+        random.seed(seed)
     return {(random.randrange(0, GRID_WIDTH), random.randrange(0, GRID_HEIGHT)) for _ in range(num)}
 
 def draw_grid(grid):
@@ -44,7 +47,17 @@ def draw_grid(grid):
 
 def get_neighbors_count(grid, pos):
     x, y = pos
-    return np.sum(grid[max(0, x-1):min(GRID_HEIGHT, x+2), max(0, y-1):min(GRID_WIDTH, y+2)]) - grid[x, y]
+    total = np.sum(grid[max(0, x-1):min(GRID_HEIGHT, x+2), max(0, y-1):min(GRID_WIDTH, y+2)]) - grid[x, y]
+    # Wrap around edges
+    if x == 0:
+        total += np.sum(grid[GRID_HEIGHT-1:max(0, x+2), max(0, y-1):min(GRID_WIDTH, y+2)]) - grid[GRID_HEIGHT-1, y]
+    if x == GRID_HEIGHT - 1:
+        total += np.sum(grid[0:2, max(0, y-1):min(GRID_WIDTH, y+2)]) - grid[0, y]
+    if y == 0:
+        total += np.sum(grid[max(0, x-1):min(GRID_HEIGHT, x+2), GRID_WIDTH-1:max(0, y+2)]) - grid[x, GRID_WIDTH-1]
+    if y == GRID_WIDTH - 1:
+        total += np.sum(grid[max(0, x-1):min(GRID_HEIGHT, x+2), 0:2]) - grid[x, 0]
+    return total
 
 def update_grid(grid):
     new_grid = np.zeros((GRID_HEIGHT, GRID_WIDTH), dtype=int)
@@ -57,13 +70,23 @@ def update_grid(grid):
                 new_grid[row, col] = ALIVE
     return new_grid
 
+def save_grid(grid, filename="grid.pkl"):
+    with open(filename, "wb") as f:
+        pickle.dump(grid, f)
+
+def load_grid(filename="grid.pkl"):
+    with open(filename, "rb") as f:
+        return pickle.load(f)
+
 def main():
     running = True
     playing = False
     grid = np.zeros((GRID_HEIGHT, GRID_WIDTH), dtype=int)
-    
+    step = False
+    speed = 1
+
     while running:
-        clock.tick(FPS)
+        clock.tick(FPS * speed)
         
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -85,9 +108,20 @@ def main():
                     positions = gen_random(random.randrange(4, 10) * GRID_WIDTH)
                     for pos in positions:
                         grid[pos[1], pos[0]] = ALIVE
+                elif event.key == pygame.K_s:
+                    save_grid(grid)
+                elif event.key == pygame.K_l:
+                    grid = load_grid()
+                elif event.key == pygame.K_RIGHT:
+                    step = True
+                elif event.key == pygame.K_UP:
+                    speed = min(speed + 1, 10)
+                elif event.key == pygame.K_DOWN:
+                    speed = max(speed - 1, 1)
         
-        if playing:
+        if playing or step:
             grid = update_grid(grid)
+            step = False
         
         screen.fill(GREY)
         draw_grid(grid)
