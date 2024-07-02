@@ -83,14 +83,25 @@ def load_grid(filename="grid.pkl"):
     with open(filename, "rb") as f:
         return pickle.load(f)
 
-def draw_button(screen, text, x, y, w, h, inactive_color, active_color, action=None):
+# Track button clicks
+button_pressed = {
+    "step_forward": False,
+    "step_backward": False
+}
+
+def draw_button(screen, text, x, y, w, h, inactive_color, active_color, action=None, button_name=None):
+    global button_pressed
     mouse = pygame.mouse.get_pos()
     click = pygame.mouse.get_pressed()
 
     if x + w > mouse[0] > x and y + h > mouse[1] > y:
         pygame.draw.rect(screen, active_color, (x, y, w, h))
         if click[0] == 1 and action is not None:
-            action()
+            if not button_pressed[button_name]:
+                button_pressed[button_name] = True
+                action()
+        elif click[0] == 0:
+            button_pressed[button_name] = False
     else:
         pygame.draw.rect(screen, inactive_color, (x, y, w, h))
 
@@ -129,7 +140,7 @@ def step_backward():
         grid = grid_history[history_index].copy()
 
 def main():
-    global grid, grid_history, history_index
+    global grid, grid_history, history_index, button_pressed
     running = True
     playing = False
     grid = np.zeros((GRID_HEIGHT, GRID_WIDTH), dtype=int)
@@ -184,8 +195,8 @@ def main():
         # Draw buttons
         draw_button(screen, "Clear", 10, 5, 120, 30, DARK_GREY, BLACK, clear_grid)
         draw_button(screen, "Regenerate", 140, 5, 140, 30, DARK_GREY, BLACK, regenerate_grid)
-        draw_button(screen, "Step <-", 290, 5, 120, 30, DARK_GREY, BLACK, step_backward)
-        draw_button(screen, "Step ->", 420, 5, 120, 30, DARK_GREY, BLACK, step_forward)
+        draw_button(screen, "Step <-", 290, 5, 120, 30, DARK_GREY, BLACK, step_backward, button_name="step_backward")
+        draw_button(screen, "Step ->", 420, 5, 120, 30, DARK_GREY, BLACK, step_forward, button_name="step_forward")
         draw_button(screen, "Save", 550, 5, 120, 30, DARK_GREY, BLACK, lambda: save_grid(grid))
         
         pygame.display.update()
